@@ -31,6 +31,9 @@
     (POST "/createAttributeType" request (create-Attribute-Type request))
     (POST "/createCustomFunction" request (create-Custom-Function request))
 
+    (POST "/createClass" request (create-Class request))
+    (POST "/createNodeClassInstances" request (create-Node-Class-Instances request))
+    (POST "/createRelationClassInstances" request (create-Relation-Class-Instances request))
 
     (DELETE "/deleteNodes" request (delete-Nodes request))
 

@@ -49,19 +49,21 @@
   Map keys will be used as neo4j node keys.
   Map keys should be Strings only.
   Map values must be neo4j compatible Objects
-  
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false  
   Mandatory arguments:
   :labels Should not be empty and must be a collection of string labels"
   [& {:keys [labels
              parameters
-             aggregator
              execute?
              unique?
-             uuid?]
+             uuid?
+             queryAggregator]
       :or {execute? true
            unique? false
            uuid? uuidEnabled
-           parameters {}}
+           parameters {}
+           queryAggregator nil}
       :as keyArgs
       }
    ]
@@ -83,14 +85,10 @@
                          :labels labels}
         ]
     (if execute?
-      (if aggregator
-        (queryAggregator/addQueries aggregator "Data" (merge builtQuery {:IDMap mergedParams}))
-        ((gdriver/runQuery builtQuery) :summary)
-        )
-      builtQuery
-      )
-    )
-  )  
+      ((gdriver/runQuery builtQuery) :summary)
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 ;; (defn createNodes
 ;;   "Create Multiple Nodes in One Query"
@@ -98,6 +96,8 @@
 
 (defn deleteRelation
   "Delete a relation between two nodes matched with their properties (input as clojure map) with it's own properties
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false  
   No mandatory arguments, when used with no parameters, it will return a query to delete all relations in the neo4j db"
   [& {:keys [fromNodeLabels
              fromNodeParameters
@@ -105,14 +105,16 @@
              relationshipParameters
              toNodeLabels
              toNodeParameters
-             execute?]
+             execute?
+             queryAggregator]
       :or {fromNodeLabels []
            toNodeLabels []
            relationshipType ""
            execute? false
            toNodeParameters {}
            fromNodeParameters {}
-           relationshipParameters {}}}]
+           relationshipParameters {}
+           queryAggregator nil}}]
   {:pre [
          (every? coll? [fromNodeLabels toNodeLabels])
          (every? map? [fromNodeParameters relationshipParameters toNodeParameters])]}
@@ -141,18 +143,18 @@
          :parameters (combinedProperties :combinedPropertyMap)}]
     (if execute?
       ((gdriver/runQuery builtQuery) :summary)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn editRelation
   "Edit Parameters of a relation
   Mandatory arguments:
   :newRelelationshipParamters should be a non-empty clojure map
-  
   Not specifying :fromNodeLabels, :toNodeLabels, and the other arguments,
-  will affect all relations in the graphdb so use wisely"
+  will affect all relations in the graphdb so use wisely
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [fromNodeLabels
              fromNodeParameters
              relationshipType
@@ -160,16 +162,16 @@
              toNodeLabels
              toNodeParameters
              newRelationshipParameters
-             execute?]
+             execute?
+             queryAggregator]
       :or {execute? false
            fromNodeLabels []
            toNodeLabels []
            relationshipType ""
            toNodeParameters {}
            fromNodeParameters {}
-           relationshipParameters {}}
-      }
-   ]
+           relationshipParameters {}
+           queryAggregator nil}}]
   {:pre [
          (every? coll? [fromNodeLabels toNodeLabels])
          (every? map? [fromNodeParameters relationshipParameters toNodeParameters])
@@ -204,10 +206,9 @@
          :parameters (combinedProperties :combinedPropertyMap)}]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn editRelationPropList
   "Edit Parameter of a relation that is a List
@@ -216,7 +217,9 @@
   :editVal should represent value for APPEND/DELETE/REPLACE.(Mandatory)
   :replaceVal should be intended value, if :editVal is REPLACE
   As usual, not specifying :fromNodeLabels, :toNodeLabels, :fromNodeParameters etc,
-  will affect all nodes/relations."
+  will affect all nodes/relations.
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [fromNodeLabels
              fromNodeParameters
              relationshipType
@@ -227,16 +230,16 @@
              editType
              editVal
              replaceVal
-             execute?]
+             execute?
+             queryAggregator]
       :or {execute? true
            toNodeLabels []
            fromNodeLabels []
            relationshipType ""
            toNodeParameters {}
            fromNodeParameters {}
-           relationshipParameters {}}
-      }
-   ]
+           relationshipParameters {}
+           queryAggregator nil}}]
   {:pre [(every? coll? [fromNodeLabels toNodeLabels])
          (every? map? [fromNodeParameters relationshipParameters toNodeParameters])]}
   (let [toNodeLabel (createLabelString :labels toNodeLabels)
@@ -273,15 +276,15 @@
         ]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn createRelation
   "Relate two nodes matched with their properties (input as clojure map) with it's own properties
-  
-  No mandatory Arguments, but when using with no arguments it will create a junk relation between ALL nodes"
+  No mandatory Arguments, but when using with no arguments it will create a junk relation between ALL nodes
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [fromNodeLabels
              fromNodeParameters
              relationshipType
@@ -289,7 +292,8 @@
              toNodeLabels
              toNodeParameters
              execute?
-             unique?]
+             unique?
+             queryAggregator]
       :or {execute? true
            unique? false
            toNodeLabels []
@@ -297,9 +301,8 @@
            relationshipType ""
            toNodeParameters {}
            fromNodeParameters {}
-           relationshipParameters {}}
-      }
-   ]
+           relationshipParameters {}
+           queryAggregator nil}}]
   {:pre [(every? coll? [fromNodeLabels toNodeLabels])
          (every? map? [fromNodeParameters relationshipParameters toNodeParameters])]}
   (let [toNodeLabel (createLabelString :labels toNodeLabels)
@@ -332,30 +335,31 @@
          :parameters (combinedProperties :combinedPropertyMap)}]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn mergeRelation
   "Create, if not exists, a relation betrween two nodes matched with their properties (input as clojure map) with it's own properties
-  No mandatory arguments. But use wisely"
+  No mandatory arguments. But use wisely
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [fromNodeLabels
              fromNodeParameters
              relationshipType
              relationshipParameters
              toNodeLabels
              toNodeParameters
-             execute?]
+             execute?
+             queryAggregator]
       :or {execute? true
            toNodeLabels []
            fromNodeLabels []
            relationshipType ""
            toNodeParameters {}
            fromNodeParameters {}
-           relationshipParameters {}}
-      }
-   ]
+           relationshipParameters {}
+           queryAggregator nil}}]
   {:pre [(every? coll? [fromNodeLabels toNodeLabels])
          (every? map? [fromNodeParameters relationshipParameters toNodeParameters])]}
   (let [toNodeLabel (createLabelString :labels toNodeLabels)
@@ -382,21 +386,24 @@
                     :parameters (combinedProperties :combinedPropertyMap)}]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn deleteNodes
   "Delete node(s) matched using property map
   No mandatory Arguments, but if you execute without arguments, it will try
-  to delete all nodes!!"
+  to delete all nodes!!
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              parameters
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            execute? false
-           parameters {}}
+           parameters {}
+           queryAggregator nil}
       }
    ]
   (let [builtQuery {:query (str "MATCH (node"(createLabelString :labels labels)" "
@@ -407,23 +414,25 @@
                     :rcs-vars ["UUID"]
                     :rcs-bkp? true}
         ]
-    (if
-        execute?
+    (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn deleteDetachNodes
   "Delete node(s) matched using property map and detach (remove relationships)
-  No mandatory arguments, but use wisely"
+  No mandatory arguments, but use wisely
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              parameters
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            execute? false
-           parameters {}}
+           parameters {}
+           queryAggregator nil}
       }
    ]
   (let [builtQueries [(deleteRelation :fromNodeLabels labels
@@ -436,28 +445,29 @@
                                    :parameters parameters
                                    :execute? false)]
         ]
-    (if
-        execute?
+    (if execute?
       (apply gdriver/runQuery builtQueries)
-      builtQueries
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+        builtQueries))))
 
 (defn removeNodeProperties
   "Remove Properties of Node(s).
   :propList should be a list of properties to be deleted.
-  
   No mandatory arguments, but will try to fetch all node UUID when no
-  arguments are given"
+  arguments are given
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              parameters
              propList
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            propList []
            execute? true
-           parameters {}}
+           parameters {}
+           queryAggregator nil}
       }
    ]
   {:pre [(map? parameters)
@@ -473,27 +483,28 @@
                     :parameters parameters
                     }
         ]
-    (if
-        execute?
+    (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn editNodeProperties
   "Edit Properties of Node(s)
-
   No mandatory arguments, but will try to fetch all node UUIDs when no
-  arguments are given"
+  arguments are given
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              parameters
              changeMap
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            changeMap {}
            execute? true
-           parameters {}}
+           parameters {}
+           queryAggregator nil}
       }
    ]
   {:pre [(map? parameters)
@@ -513,26 +524,28 @@
                     :labels labels
                     }
         ]
-    (if
-        execute?
+    (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn renameNodeProperties
   "Rename node(s) properties.
-  
   :labels should be a collection of string labels
   :parameters should be a map to match a node or nodes with
-  :renameMap should be a map eg. {'oldParameterName' 'NewParameterName'} (Mandatory)"
+  :renameMap should be a map eg. {'oldParameterName' 'NewParameterName'} (Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              parameters
              renameMap
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            execute? true
-           parameters {}}
+           parameters {}
+           queryAggregator nil}
       }
    ]
   {:pre [(map? parameters)
@@ -547,12 +560,11 @@
          :rcs-vars ["UUID"]
          :parameters {}}
         ]
-    (if
-        execute?
+    (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn editNodePropList
   "Edits a property of a node with a list as a value.
@@ -561,18 +573,22 @@
   :propName should be string, representing the propertyName.(Mandatory)
   :editType should be one of APPEND,DELETE,REPLACE.(Mandatory)
   :editVal should represent value for APPEND/DELETE/REPLACE.(Mandatory if not deleting)
-  :replaceVal should be intended value, if :editVal is REPLACE"
+  :replaceVal should be intended value, if :editVal is REPLACE
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              parameters
              propName
              editType
              editVal
              replaceVal
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            replaceVal nil
            parameters {}
-           execute? true}
+           execute? true
+           queryAggregator nil}
       }
    ]
   {:pre [(map? parameters)]}
@@ -594,21 +610,24 @@
         ]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery
-      )
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn removeLabels
   "Removes labels from a node
-  :remLabelList should be a list of strings (Mandatory)"
+  :remLabelList should be a list of strings (Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              properties
              remLabelList
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            properties {}
-           execute? true}}]
+           execute? true
+           queryAggregator nil}}]
   {:pre [(map? properties)
          (coll? remLabelList)
          (every? string? remLabelList)
@@ -621,25 +640,29 @@
                     :parameters properties}]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn renameLabels
   "Renames label(s) of a node/relation.
   :objectType should be NODE or RELATION.(Mandatory)
   :replaceLabelMap should be a map of strings, with keys as existing labels and the values as newLabels.(Mandatory)
   if a label with a particular key doesnt exist, the new label will be added.
-  if :objectType is RELATION, replaceLabelmap can only have one string"
+  if :objectType is RELATION, replaceLabelmap can only have one string
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [labels
              properties
              objectType
              replaceLabelMap
-             execute?]
+             execute?
+             queryAggregator]
       :or {labels []
            properties {}
            objectType "NODE"
-           execute? true}}]
+           execute? true
+           queryAggregator nil}}]
   {:pre [(map? properties)
          (map? replaceLabelMap)
          (every? string? (vals replaceLabelMap))
@@ -671,24 +694,28 @@
                     :parameters properties}]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)
-    ))
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn revertNode
   "Revert Properties/Labels of a node to an older version.
-
   No mandatory arguments, but when no arguments are given, it will
-  try to fetch all node UUID"
+  try to fetch all node UUID
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [matchLabels
              newLabels
              matchProperties
              newProperties
-             execute?]
+             execute?
+             queryAggregator]
       :or {matchLabels []
            newLabels []
            matchProperties {}
            newProperties {}
-           execute? true}}]
+           execute? true
+           queryAggregator nil}}]
   {:pre [(coll? matchLabels)
          (coll? newLabels)
          (map? matchProperties)
@@ -727,13 +754,16 @@
                     :labels newLabels}]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)))
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn revertRelation
   "Revert properties/type of a relation
   Mandatory arguments:
   :relationshipType
-  "
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [fromNodeLabels
              fromNodeParameters
              toNodeLabels
@@ -741,14 +771,16 @@
              relationshipType
              matchRelationshipParameters
              newRelationshipParameters
-             execute?]
+             execute?
+             queryAggregator]
       :or {fromNodeLabels []
            fromNodeParameters {}
            toNodeLabels []
            toNodeParameters {}
            matchRelationshipParameters {}
            newRelationshipParameters {}
-           execute? false}}]
+           execute? false
+           queryAggregator nil}}]
   {:pre [(string? relationshipType)
          (coll? fromNodeLabels)
          (coll? toNodeLabels)
@@ -783,11 +815,12 @@
                     :labels toNodeLabels}]
     (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)))
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn getNodes
   "Get Node(s) matched by label and propertyMap
-  
   No mandatory arguments"
   [& {:keys [labels
              parameters
@@ -811,7 +844,6 @@
 
 (defn getRelations
   "Get relations matched by inNode/outNode/type and properties
-
   No mandatory arguments"
   [& {:keys [fromNodeLabels
              fromNodeParameters
@@ -884,8 +916,8 @@
 
 (defn getNeighborhood
   "Get the neighborhood of a particular node
-  
-  No mandatory arguments."
+  No mandatory arguments.
+  WARNING - DEPRECATED, not used. Use gdriver/getNBH instead"
   [& {:keys [labels
              parameters]
       :or {parameters {}}
@@ -919,8 +951,6 @@
     )
   )
 
-;;Class building functions start here
-
 (defn prepMapAsArg
   "Converts a map so that it can be used as keyArgs"
   [keyMap]
@@ -949,13 +979,17 @@
   :propertyVec should be a vector of properties(string).(Mandatory)
   :constraintType should be either UNIQUE or NODEEXISTANCE or RELATIONEXISTANCE or NODEKEY.(Mandatory)
   if :constraintType is NODEKEY, :propertyVec should be a vector of vectors of properties(string).
-  :execute? (boolean) whether the constraints are to be created, or just return preparedQueries"
+  :execute? (boolean) whether the constraints are to be created, or just return preparedQueries
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [label
              CD
              propertyVec
              constraintType
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       }
    ]
   {:pre [
@@ -1006,23 +1040,26 @@
                              }
                             ) propertyVec)
         ]
-    (if
-        execute?
+    (if execute?
       (apply gdriver/runQuery builtQueries)
-      builtQueries)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+        builtQueries))))
 
 (defn manageUniqueConstraints
   "Create/Drop Unique Constraints on label properties.
   :label is treated as a Node Label.(Mandatory)
   :CD can be CREATE,DROP.(Mandatory)
-  :propertyVec should be a vector of properties(Mandatory)"
+  :propertyVec should be a vector of properties(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with :schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [label
              CD
              propertyVec
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       :as keyArgs}
    ]
   (apply manageConstraints
@@ -1030,23 +1067,24 @@
           (assoc
            keyArgs
            :constraintType "UNIQUE"
-           )
-          )
-         )
-  )
+           ))))
 
 (defn manageExistanceConstraints
   "Create/Drop Existance Constraints on label properties.
   :label is treated as a Node label or relation label based on value of NR.(Mandatory)
   :CD can be CREATE, DROP.(Mandatory)
   :propertyVec should be a vector of properties.(Mandatory)
-  :NR should be either NODE or RELATION(Mandatory)"
+  :NR should be either NODE or RELATION(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with :schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [label
              CD
              propertyVec
              NR
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       :as keyArgs}]
   {:pre [(contains? #{"CREATE" "DROP"} CD)]
    }
@@ -1055,22 +1093,22 @@
           (assoc
            (dissoc
             keyArgs :NR)
-           :constraintType (str NR "EXISTANCE")
-           )
-          )
-         )
-  )
+           :constraintType (str NR "EXISTANCE")))))
 
 (defn manageNodeKeyConstraints
   "Create/Drop Node Key Constraints on node label properties.
   :label is treated as node label.(Mandatory)
   :CD can be CREATE, DROP.(Mandatory)
-  :propPropVec should be a vector of vectors of properties(string).(Mandatory)"
+  :propPropVec should be a vector of vectors of properties(string).(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with :schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [label
              CD
              propPropVec
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       :as keyArgs}]
   ;;For some reason, creating/dropping a nodekey doesn't reflect on summary.
   ;;So don't be surprised if no errors occur or no changes exist in the summary.
@@ -1079,10 +1117,7 @@
           (assoc
            keyArgs
            :constraintType "NODEKEY"
-           :propertyVec propPropVec)
-          )
-         )
-  )
+           :propertyVec propPropVec))))
 
 (defn createNCConstraints
   "Create Constraints that apply to nodes with label NeoConstraint"
@@ -1137,9 +1172,7 @@
     (if
         execute?
       (apply gdriver/runQuery builtQueries)
-      builtQueries)
-    )
-  )
+      builtQueries)))
 
 (defn createVRATConstraints
   "Creates Constraints that apply to relations with label ValueRestrictionAppliesTo"
@@ -1150,8 +1183,7 @@
                               :CD "CREATE"
                               :propertyVec ["constraintValue"]
                               :NR "RELATION"
-                              :execute? execute?)
-  )
+                              :execute? execute?))
 
 (defn createCCATConstraints
   "Creates Constraints that apply to relations with label CustomConstraintAppliesTo"
@@ -1162,8 +1194,7 @@
                               :CD "CREATE"
                               :propertyVec ["constraintValue" "atList"]
                               :NR "RELATION"
-                              :execute? execute?)
-  )
+                              :execute? execute?))
 
 (defn createClassConstraints
   "Create Constraints that apply to nodes with label Class"
@@ -1183,12 +1214,9 @@
                        ]
                       )
         ]
-    (if
-        execute?
+    (if execute?
       (apply gdriver/runQuery builtQueries)
-      builtQueries)
-    )
-  )
+      builtQueries)))
 
 (defn createNeoConstraint
   "Creates a NeoConstraint Node that describes a supported neo4j constraint.
@@ -1243,8 +1271,6 @@
       builtQueries))
   )
 
-;;TODO CUSTOM CONSTRAINTS
-
 (def validATDatatypes #{"java.lang.Boolean",
                         "java.lang.Byte",
                         "java.lang.Short",
@@ -1270,11 +1296,15 @@
 (defn createCustomFunction
   "Creates a customFunction.
   :fnName should be string.(Mandatory)
-  :fnString should be string that represents CustomFunction template.(Mandatory)"
+  :fnString should be string that represents CustomFunction template.(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [fnName
              fnString
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(gcust/stringIsCustFunction? fnString)
          (string? fnName)]}
@@ -1282,11 +1312,11 @@
                  :parameters {	"fnName" fnName
                               "fnString" fnString
                               "fnIntegrity" (gcust/hashCustomFunction fnString)}
-                 :execute? execute?))
+                 :execute? execute?
+                 :queryAggregator queryAggregator))
 
 (defn getCustomFunctions
   "Get CustomFunctions
-
   No mandatory arguments"
   [& {:keys [count?]
       :or {count? false}}]
@@ -1298,11 +1328,15 @@
   "Edit a CustomFunction's fnName and/or fnString
   :fnName should be the desired fnName(Mandatory)
   :changeMap should be a map with keys 'fnName', 'fnString'
-  with the desired values(Mandatory)"
+  with the desired values(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [fnName
              changeMap
-             execute?]
-      :or {execute? true}}]
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}]
   {:pre [(string? fnName)
          (map? changeMap)
          (not (empty? changeMap))
@@ -1323,18 +1357,20 @@
     (editNodeProperties :labels ["CustomFunction"]
                         :parameters {"fnName" fnName}
                         :changeMap mChangeMap
-                        :execute? execute?)
-    )
-  )
+                        :execute? execute?
+                        :queryAggregator queryAggregator)))
 
 (defn reHashCustomFunctions
   "Re-Hash all CustomFunctions.
   Could take a long time depending on size of database.
   Use only when customPassword is changed
-  
-  No mandatory arguments"
-  [& {:keys [execute?]
-      :or {execute? true}}]
+  No mandatory arguments
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
+  [& {:keys [execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}]
   (let [builtQueries (map (fn [customFunction]
                             (let [cf (into {} (customFunction :properties))]
                               (editCustomFunction :fnName (cf "fnName")
@@ -1347,13 +1383,12 @@
                           )]
     (if execute?
       (apply gdriver/runQuery builtQueries)
-      builtQueries)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+        builtQueries))))
 
 (defn getClassAttributeTypes
   "Get all AttributeTypes 'attributed' to a class
-
   :className should be a string (Mandatory)"
   [& {:keys [className
              count?]
@@ -1372,7 +1407,6 @@
 
 (defn getClassApplicableSourceNT
   "Get all Source NodeTypes 'attributed' to a class
-  
   :className should be the name of the class(Mandatory)"
   [& {:keys [className
              count?]
@@ -1391,7 +1425,6 @@
 
 (defn getClassApplicableTargetNT
   "Get all Target NodeTypes 'attributed' to a class
-
   :className should be string(Mandatory)"
   [& {:keys [className
              count?]
@@ -1461,13 +1494,17 @@
   :className string(Mandatory)
   :constraintType UNIQUE,NODEKEY,EXISTANCE(Mandatory)
   :constraintTarget NODE,RELATION(Mandatory)
-  :constraintValue depends upon :_constraintTarget and :_constraintType(Mandatory)"
+  :constraintValue depends upon :_constraintTarget and :_constraintType(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with :schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              constraintType
              constraintTarget
              constraintValue
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       :as keyArgs}
    ]
   {:pre [
@@ -1486,8 +1523,7 @@
                                        "EXISTANCE" (str constraintTarget constraintType)
                                        )
                      :execute? execute?
-                     )
-  )
+                     :queryAggregator queryAggregator))
 
 (defn applyClassNeoConstraint
   "Apply a NeoConstraint that apply to a class.
@@ -1495,13 +1531,16 @@
   :constraintType UNIQUE,NODEKEY,EXISTANCE(Mandatory)
   :constraintTarget NODE,RELATION(Mandatory)
   :constraintValue depends upon :_constraintTarget and :_constraintType(Mandatory)
-  :execute?"
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with :schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              constraintType
              constraintTarget
              constraintValue
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       :as keyArgs}
    ]
   {:pre [
@@ -1520,15 +1559,18 @@
                                        "EXISTANCE" (str constraintTarget constraintType)
                                        )
                      :execute? execute?
-                     )
-  )
+                     :queryAggregator queryAggregator))
 
 (defn exemptClassNeoConstraints
   "Exempt all NeoConstraints for a class
-  :className string(Mandatory)"
+  :className string(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with :schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       :as keyArgs}]
   (let [builtQueries 
         (reduceQueryColl
@@ -1554,19 +1596,22 @@
           )
          )
         ]
-    (if
-        execute?
+    (if execute?
       (apply gdriver/runQuery builtQueries)
-      builtQueries)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+        builtQueries))))
 
 (defn applyClassNeoConstraints
   "Apply all NeoConstraints for a class
-  :className string (Mandatory)"
+  :className string (Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator with :schema? true
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
-             execute?]
-      :or {execute? true}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}
       :as keyArgs}]
   (let [builtQueries 
         (reduceQueryColl
@@ -1592,23 +1637,26 @@
           )
          )
         ]
-    (if
-        execute?
+    (if execute?
       (apply gdriver/runQuery builtQueries)
-      builtQueries)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+        builtQueries))))
 
 (defn remRelApplicableType
   "Remove an applicable Source/Target type to a Relation Class, by removing a relation: ApplicableSourceNT/ApplicableTargetNT.
   :className should be className of relation class.(Mandatory)
   :applicationType should be either SOURCE or TARGET as string.(Mandatory)
-  :applicableClassName should be a className of the source or target Node Class(Mandatory)"
+  :applicableClassName should be a className of the source or target Node Class(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              applicationType
              applicableClassName
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? className)
          (contains? #{"Source" "Target"} applicationType)
@@ -1637,23 +1685,26 @@
                                                       "classType" "NODE"}
                                    :execute? false)
         ]
-    (if
-        execute?
+    (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn addRelApplicableType
   "Add an applicable Source/Target type to a Relation Class, by creating a relation: ApplicableSourceNT/ApplicableTargetNT.
   :className should be className of relation class.(Mandatory)
   :applicationType should be either SOURCE or TARGET as string.(Mandatory)
-  :applicableClassName should be a className of the source or target Node Class(Mandatory)"
+  :applicableClassName should be a className of the source or target Node Class(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              applicationType
              applicableClassName
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? className)
          (contains? #{"Source" "Target"} applicationType)
@@ -1683,12 +1734,11 @@
                                    :execute? false
                                    :unique? true)
         ]
-    (if
-        execute?
+    (if execute?
       (gdriver/runQuery builtQuery)
-      builtQuery)
-    )
-  )
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries [builtQuery])
+        builtQuery))))
 
 (defn getRelApplicableNTs
   "Get a relation class' ApplicableNTs.
@@ -1718,19 +1768,21 @@
                                               "nt"))
                      :parameters (combinedPropertyMap :combinedPropertyMap)}
         ]
-    ((gdriver/runQuery builtQuery1 builtQuery2) :results)
-    )
-  )
+    ((gdriver/runQuery builtQuery1 builtQuery2) :results)))
 
 (defn addClassAT
   "Adds a relation HasAttributeType from Class to AttributeType.
   :_atname: _name of AttributeType.(Mandatory)
   :_atdatatype: _datatype of AttributeType.(Mandatory)
-  :className: className of Class(Mandatory)"
+  :className: className of Class(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [_atname
              className
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   
   {:pre [(string? className)
@@ -1747,18 +1799,23 @@
                   :toNodeLabels ["AttributeType"]
                   :toNodeParameters {"_name" _atname}
                   :unique? true
-                  :execute? execute?)
+                  :execute? execute?
+                  :queryAggregator queryAggregator)
   )
 
 (defn remClassAT
   "Removes relation HasAttributeType from Class to AttributeType.
   :_atname: _name of AttributeType.(Mandatory)
   :_atdatatype: _datatype of AttributeType.(Mandatory)
-  :className: className of Class(Mandatory)"
+  :className: className of Class(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [_atname
              className
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [
          (string? className)
@@ -1774,20 +1831,24 @@
                   :relationshipParameters {}
                   :toNodeLabels ["AttributeType"]
                   :toNodeParameters {"_name" _atname}
-                  :execute? execute?)
-  )
+                  :execute? execute?
+                  :queryAggregator queryAggregator))
 
 (defn addATVR
   "Adds a ValueRestriction to an AttributeType.
   Creates a relation ValueRestrictionAppliesTo from CustomFunction to AttributeType.
   :_atname should be _name of an AttributeType.(Mandatory)
   :fnName should be fnName of a CustomFunction.(Mandatory)
-  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)"
+  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [_atname
              fnName
              constraintValue
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? _atname)
          (string? fnName)]}
@@ -1798,20 +1859,24 @@
                   :toNodeLabels ["AttributeType"]
                   :toNodeParameters {"_name" _atname}
                   :unique? true
-                  :execute? execute?)
-  )
+                  :execute? execute?
+                  :queryAggregator queryAggregator))
 
 (defn remATVR
   "Removes a ValueRestriction to an AttributeType.
   Creates a relation ValueRestrictionAppliesTo from CustomFunction to AttributeType.
   :_atname should be _name of an AttributeType.(Mandatory)
   :fnName should be fnName of a CustomFunction.(Mandatory)
-  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)"
+  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [_atname
              fnName
              constraintValue
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? _atname)
          (string? fnName)]}
@@ -1821,8 +1886,8 @@
                   :relationshipParameters {"constraintValue" constraintValue}
                   :toNodeLabels ["AttributeType"]
                   :toNodeParameters {"_name" _atname}
-                  :execute? execute?)
-  )
+                  :execute? execute?
+                  :queryAggregator queryAggregator))
 
 (defn editATVR
   "Edits a ValueRestriction to an AttributeType.
@@ -1830,13 +1895,17 @@
   :_atname should be _name of an AttributeType.(Mandatory)
   :fnName should be fnName of a CustomFunction.(Mandatory)
   :constraintValue should be value to be passed as CustomFunction's second argument of existing ValueRestriction(Mandatory)
-  :newConstraintValue(Mandatory)"
+  :newConstraintValue(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [_atname
              fnName
              constraintValue
              newConstraintValue
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? _atname)
          (string? fnName)]}
@@ -1847,8 +1916,8 @@
                 :toNodeLabels ["AttributeType"]
                 :toNodeParameters {"_name" _atname}
                 :newRelationshipParameters {"constraintValue" newConstraintValue}
-                :execute? execute?)
-  )
+                :execute? execute?
+                :queryAggregator queryAggregator))
 
 (defn editClassNC
   "Edits relation NeoConstraintAppliesTo from a NeoConstraint to a Class.
@@ -1856,14 +1925,20 @@
   :constraintType should be either of UNIQUE,EXISTANCE,NODEKEY(Mandatory)
   :constraintTarget should be either of NODE,RELATION.(Mandatory)
   :constraintValue should be _name of an  AttributeType or collection of _names, in case of NODEKEY.(Mandatory)
-  :newConstraintValue(Mandatory)"
+  :newConstraintValue(Mandatory)
+  :schemaQUeryAggregator and :dataQueryAggregator should both be names of existing queryAggregators,
+    either both nil or both strings. Make sure you execute both of these."
   [& {:keys [constraintType
              constraintTarget
              constraintValue
              newConstraintValue
              className
-             execute?]
-      :or {execute? true}}
+             execute?
+             schemaQueryAggregator
+             dataQueryAggregator]
+      :or {execute? true
+           schemaQueryAggregator nil
+           dataQueryAggregator nil}}
    ]
   {:pre [(string? className)
          (= 1 (count (getNodes :labels ["Class"]
@@ -1872,6 +1947,8 @@
                                )
                      )
             )
+         (or (every? nil? [schemaQueryAggregator dataQueryAggregator])
+             (every? string? [schemaQueryAggregator dataQueryAggregator]))
          (or (and (contains? #{"UNIQUE" "EXISTANCE"} constraintType) (string? newConstraintValue))
              (and (= constraintType "NODEKEY") (coll? newConstraintValue) (every? string? newConstraintValue)))
          ]
@@ -1902,11 +1979,12 @@
                                        )
                       ]
         ]
-    (if
-        execute?
+    (if execute?
       (apply gdriver/runTransactions builtQueries)
-      builtQueries))
-  )
+      (if (and schemaQueryAggregator dataQueryAggregator)
+        (do (queryAggregator/addQueries :qaName dataQueryAggregator :queries (builtQueries 0))
+            (queryAggregator/addQueries :qaName schemaQueryAggregator :queries (builtQueries 1)))
+        builtQueries))))
 
 (defn getNeoConstraintsWithAT
   "Get NeoConstraint that are applied with a particular AttributeType
@@ -1992,13 +2070,19 @@
   "Removes relation NeoConstraintAppliesTo from a NeoConstraint to a Class.
   :constraintType should be either of UNIQUE,EXISTANCE,NODEKEY.(Mandatory)
   :constraintTarget should be either of NODE,RELATION.(Mandatory)
-  :constraintValue should be _name of an  AttributeType or collection of _names, in case of NODEKEY(Mandatory)"
+  :constraintValue should be _name of an  AttributeType or collection of _names, in case of NODEKEY(Mandatory)
+  :schemaQUeryAggregator and :dataQueryAggregator should both be names of existing queryAggregators,
+    either both nil or both strings. Make sure you execute both of these."
   [& {:keys [constraintType
              constraintTarget
              constraintValue
              className
-             execute?]
-      :or {execute? true}}
+             execute?
+             schemaQueryAggregator
+             dataQueryAggregator]
+      :or {execute? true
+           dataQueryAggregator nil
+           schemaQueryAggregator nil}}
    ]
   {:pre [
          (string? className)
@@ -2025,24 +2109,30 @@
                                                 :execute? false)
                       ]
         ]
-    (if
-        execute?
+    (if execute?
       (apply gdriver/runTransactions builtQueries)
-      builtQueries)
-    )
-  )
+      (if (and schemaQueryAggregator dataQueryAggregator)
+        (do (queryAggregator/addQueries :qaName dataQueryAggregator :queries (builtQueries 0))
+            (queryAggregator/addQueries :qaName schemaQueryAggregator :queries (builtQueries 1)))
+        builtQueries))))
 
 (defn addClassNC
   "Adds a relation NeoConstraintAppliesTo from NeoConstraint to Class.
   :constraintType should be either of UNIQUE,EXISTANCE,NODEKEY.(Mandatory)
   :constraintTarget should be either of NODE,RELATION.(Mandatory)
-  :constraintValue should be _name of an  AttributeType or collection of _names, in case of NODEKEY(Mandatory)"
+  :constraintValue should be _name of an  AttributeType or collection of _names, in case of NODEKEY(Mandatory)
+  :schemaQUeryAggregator and :dataQueryAggregator should both be names of existing queryAggregators,
+    either both nil or both strings. Make sure you execute both of these."
   [& {:keys [constraintType
              constraintTarget
              constraintValue
              className
-             execute?]
-      :or {execute? true}}
+             execute?
+             schemaQueryAggregator
+             dataQueryAggregator]
+      :or {execute? true
+           dataQueryAggregator nil
+           schemaQueryAggregator nil}}
    ]
   {:pre [(string? className)
          (= 1 (count (getNodes :labels ["Class"]
@@ -2072,28 +2162,30 @@
          combinedQuery (vec (conj applyClassNeoConstraintQuery
                                   createRelationQuery)
                             )
+         builtQueries [(conj [] createRelationQuery)
+                       (vec applyClassNeoConstraintQuery)]
          ]
-    (if
-        execute?
-      (gdriver/runTransactions (conj [] createRelationQuery)
-                               (vec applyClassNeoConstraintQuery)
-                               )
-      combinedQuery
-      )		  	
-    )
-  )
+    (if execute?
+      (apply gdriver/runTransactions builtQueries)	
+      (if (and schemaQueryAggregator dataQueryAggregator)
+        (do (queryAggregator/addQueries :qaName	dataQueryAggregator :queries (builtQueries 0))
+            (queryAggregator/addQueries :qaName schemaQueryAggregator :queries (builtQueries 1)))
+        builtQueries))))
 
 (defn addClassCC
   "Adds a relation CustomConstraintAppliesTo from CustomFunction to Class.
   :fnName of a CustomFunction.(Mandatory)
   :atList should be list of AttributeTypes' _name.(Mandatory)
-  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)"
+  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)
+  :queryAggregator should be the name of an existing dataQueryAggregator"
   [& {:keys [fnName
              atList
              constraintValue
              className
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? className)
          (string? fnName)
@@ -2117,21 +2209,23 @@
                                              "constraintValue" constraintValue}
                     :toNodeLabels ["Class"]
                     :toNodeParameters {"className" className}
-                    :execute? execute?)
-    )
-  )
+                    :execute? execute?
+                    :queryAggregator queryAggregator)))
 
 (defn remClassCC
   "Delete relation CustomConstraintAppliesTo from CustomFunction to Class.
   :fnName of a CustomFunction.(Mandatory)
   :atList should be list of AttributeTypes' _name.(Mandatory)
-  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)"
+  :constraintValue should be value to be passed as CustomFunction's second argument(Mandatory)
+  :queryAggregator should be the name of an existing dataQueryAggregator"
   [& {:keys [fnName
              atList
              constraintValue
              className
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? className)
          (string? fnName)
@@ -2144,8 +2238,8 @@
                                            "constraintValue" constraintValue}
                   :toNodeLabels ["Class"]
                   :toNodeParameters {"className" className}
-                  :execute? execute?)
-  )
+                  :execute? execute?
+                  :queryAggregator queryAggregator))
 
 (defn editClassCC
   "Edit relation CustomConstraintAppliesTo from CustomFunction to Class.
@@ -2153,14 +2247,17 @@
   :className of Class(Mandatory)
   :atList should be list of AttributeTypes' _name of existing CCAT relation.(Mandatory)
   :constraintValue should be value to be passed as CustomFunction's second argument of existing CCAT relation.(Mandatory)
-  :editMap map with keys 'atList' and 'constraintValue' and appropriate values(Mandatory)"
+  :editMap map with keys 'atList' and 'constraintValue' and appropriate values(Mandatory)
+  :queryAggregator should be the name of an existing dataQueryAggregator"
   [& {:keys [fnName
              atList
              constraintValue
              className
              editMap
-             execute?]
-      :or {execute? true}}
+             execute?
+             queryAggregator]
+      :or {execute? true
+           queryAggregator nil}}
    ]
   {:pre [(string? className)
          (string? fnName)
@@ -2177,8 +2274,8 @@
                 :toNodeLabels ["Class"]
                 :toNodeParameters {"className" className}
                 :newRelationshipParameters editMap
-                :execute? execute?)
-  )
+                :execute? execute?
+                :queryAggregator queryAggregator))
 
 (defn createDelATCC
   "Creates a query to remove an AttributeType in all relations with label CustomConstraintAppliesTo.
@@ -2264,7 +2361,8 @@
   :_datatype should be a string of one of the following: 'java.lang.Boolean', 'java.lang.Byte', 'java.lang.Short', 'java.lang.Integer', 'java.lang.Long', 'java.lang.Float', 'java.lang.Double', 'java.lang.Character', 'java.lang.String', 'java.util.ArrayList'.(Mandatory)
   :subjectQualifier should be a list of strings.
   :attributeQualifier should be a list of strings.
-  :valueQualifier should be a list of strings"
+  :valueQualifier should be a list of strings
+  :queryAggregator should be the name of an existing dataQueryAggregator"
   [& {:keys [_name
              _datatype
              subTypeOf
@@ -2272,12 +2370,14 @@
              attributeQualifier
              valueQualifier
              execute?
-             subTypeOf]
+             subTypeOf
+             queryAggregator]
       :or {execute? true
            subjectQualifier []
            attributeQualifier []
            valueQualifier []
-           subTypeOf []}
+           subTypeOf []
+           queryAggregator nil}
       :as keyArgs}]
   {:pre [
          (string? _name)

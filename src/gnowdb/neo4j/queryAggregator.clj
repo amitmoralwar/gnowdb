@@ -1,14 +1,12 @@
 (ns gnowdb.neo4j.queryAggregator
   (:gen-class)
-  (:require [gnowdb.neo4j.gdriver :as gdriver]
-	    )
-  )
+  (:require [gnowdb.neo4j.gdriver :as gdriver]))
 
 (def ^{:private true} qa-prefix "QA-")
 
 (defn queryAggregator
-  [& {:keys [qaName]}]
-  (atom {:queryList [] :qaName qaName}))
+  [& {:keys [qaName schema?]}]
+  (atom {:queryList [] :qaName qaName :schema? schema?}))
 
 (defn concatVar
   [& {:keys [qaName]}]
@@ -28,14 +26,19 @@
   (boolean (getQA :qaName qaName)))
 
 (defn createQA
-  "Creates a queryAggregator."
-  [& {:keys [qaName]
+  "Creates a queryAggregator.
+  :qaName should be string. (Mandatory)
+  :schema? (boolean) should be true if constraints/indexes are being added.
+  Neo4j doesnt allow for schema changes and data changes in
+  a single transaction.
+  A queryAggregator will also follow the same rule."
+  [& {:keys [qaName
+             schema?]
       :or {qaName ""}}]
   {:pre [(string? qaName)
          (not (empty? qaName))
          (not (qaExists? :qaName qaName))]}
-  (intern 'gnowdb.neo4j.queryAggregator (symbol (concatVar :qaName qaName)) (queryAggregator :qaName qaName))
-  {:success true})
+  (intern 'gnowdb.neo4j.queryAggregator (symbol (concatVar :qaName qaName)) (queryAggregator :qaName qaName :schema? (boolean schema?))))
 
 (defn delQA
   "Deletes a created queryAggregator"
@@ -61,7 +64,11 @@
            queries ()}}]
   {:pre [(string? qaName)
          (qaExists? :qaName qaName)]}
-  (swap! (var-get (getQA :qaName qaName)) #(update-in %1 [:queryList] (fn [ql] (concat ql %2))) queries))
+  (let [qa (var-get (getQA :qaName qaName))]
+    (if (= (@qa :schema?)
+           (boolean (some #(:schema-changed? %) queries)))
+      (swap! qa #(update-in %1 [:queryList] (fn [ql] (concat ql %2))) queries)
+      (throw (Exception. (str "Schema changes and Data changes cannot be done in the same transaction."))))))
 
 (defn runQueries
   "Runs the queries in the queryAggregator
@@ -70,7 +77,7 @@
       :or {qaName ""}}]
   {:pre [(string? qaName)
          (not (empty? qaName))]}
-  (apply gdriver/runTransactions [((deref (var-get (getQA :qaName qaName))) :queryList)]))
+  (apply gdriver/runQuery  ((deref (var-get (getQA :qaName qaName))) :queryList)))
 
 (defn flushQueries
   "Runs the queries in the queryAggregator and empties the query aggregator.
@@ -79,6 +86,15 @@
   [& {:keys [qaName]
       :or {qaName ""}}]
   (let [ret (runQueries :qaName qaName)]
-    (reset! (var-get (getQA :qaName qaName)) {:queryList [] :qaName qaName})
+    (swap! (var-get (getQA :qaName qaName)) #(assoc % :queryList []))
     ret))
+
+
+
+
+
+
+
+
+
 
