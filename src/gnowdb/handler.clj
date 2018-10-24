@@ -15,6 +15,7 @@
             [compojure.route :as route]
             
             [gnowdb.routes.gneo :refer [gneo-routes]]
+            [gnowdb.routes.gneoauto :refer [gneo-auto-routes]]
             [gnowdb.routes.workspaces :refer [workspaces-routes]]
             [gnowdb.routes.files :refer [files-routes]]
             [gnowdb.routes.login :refer [login-routes]]
@@ -42,7 +43,7 @@
 
 
 (def app
-  (-> (routes gneo-routes workspaces-routes files-routes login-routes app-routes)  
+  (-> (routes gneo-routes gneo-auto-routes workspaces-routes files-routes login-routes app-routes)  
       
       (friend/authenticate {:credential-fn (partial creds/bcrypt-credential-fn @users)
                             :workflows [(workflows/interactive-form)]
@@ -51,8 +52,9 @@
                             :default-landing-uri "/api"})  
       (wrap-keyword-params)
       (wrap-params)      
-      (wrap-nested-params) 
-      (wrap-json-params) 
+      (wrap-nested-params)
+      (wrap-json-params)
+      
       (wrap-session)    
       (handler/site)
    ))

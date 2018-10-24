@@ -24,9 +24,10 @@
 
 (defresource get-All-Nodes [request]
   :service-available? true
-  :allowed-methods [:get]
-  :handle-ok (fn [_] (getAllNodes))
+  :method-allowed? (request-method-in :post :get)
+  :handle-ok (fn [_] (get-All-Nodes))
   :available-media-types ["application/json"])
+
 
 (defresource create-New-Node [request]
   :service-available? true
@@ -262,10 +263,7 @@
   :handle-ok (fn [_] (getATValueRestrictions (get-in request [:params :atName])))
   :available-media-types ["application/json"])
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 
 

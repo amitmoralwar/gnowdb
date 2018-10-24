@@ -954,7 +954,7 @@
 (defn prepMapAsArg
   "Converts a map so that it can be used as keyArgs"
   [keyMap]
-  (reduce #(concat %1 %2) keyMap))
+  (reduce #(concat %1 %2) {} keyMap))
 
 (defn reduceQueryColl
   "Reduce collections/sub-collections of queries (({:query '...' :parameters {}})...()...()...) to a single collection of queries ({:query '...' :parameters {}} {...} {...})"
@@ -3356,8 +3356,8 @@
    ]
   {:pre [
          (string? className)
-         (every? string? (map #(% :fromClassName) relList))
-         (every? string? (map #(% :toClassName) relList))
+         (every? string? (map #(% "fromClassName") relList))
+         (every? string? (map #(% "toClassName") relList))
          (coll? relList)
          (every? map? relList)]}
   (try;;MARK remove into {}
@@ -3374,15 +3374,15 @@
           ]
       (doall (map (fn [relation]
                     (if
-                        (not (contains? relSourceNTs (relation :fromClassName)))
-                      (throw (Exception. (str (relation :fromClassName)
+                        (not (contains? relSourceNTs (relation "fromClassName")))
+                      (throw (Exception. (str (relation "fromClassName")
                                               " is not an ApplicableSourceNT for "className)
                                          )
                              )
                       )
                     (if
-                        (not (contains? relTargetNTs (relation :toClassName)))
-                      (throw (Exception. (str (relation :toClassName)
+                        (not (contains? relTargetNTs (relation "toClassName")))
+                      (throw (Exception. (str (relation "toClassName")
                                               " is not an ApplicableTargetNT for "className)
                                          )
                              )
@@ -3396,12 +3396,12 @@
                             :instList (map #(% :propertyMap) relList)
                             )
     (let [builtQueries (map #(createRelation
-                              :fromNodeLabels [(% :fromClassName)]
-                              :fromNodeParameters (% :fromPropertyMap)
+                              :fromNodeLabels [(% "fromClassName")]
+                              :fromNodeParameters (% "fromPropertyMap")
                               :relationshipType className
-                              :relationshipParameters (% :propertyMap)
-                              :toNodeLabels [(% :toClassName)]
-                              :toNodeParameters (% :toPropertyMap)
+                              :relationshipParameters (% "propertyMap")
+                              :toNodeLabels [(% "toClassName")]
+                              :toNodeParameters (% "toPropertyMap")
                               :execute? false
                               :unique? true) relList)]
       (if
