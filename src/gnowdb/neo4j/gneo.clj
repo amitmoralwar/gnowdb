@@ -3393,7 +3393,7 @@
       )
     (validateClassInstances :className className
                             :classType "RELATION"
-                            :instList (map #(% :propertyMap) relList)
+                            :instList (map #(% "propertyMap") relList)
                             )
     (let [builtQueries (map #(createRelation
                               :fromNodeLabels [(% "fromClassName")]
