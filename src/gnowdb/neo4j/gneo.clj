@@ -1783,8 +1783,7 @@
              queryAggregator]
       :or {execute? true
            queryAggregator nil}}
-   ]
-  
+   ]  
   {:pre [(string? className)
          (= 1 (count (getNodes :labels ["AttributeType"]
                                :parameters {"_name" _atname}
@@ -3393,7 +3392,7 @@
       )
     (validateClassInstances :className className
                             :classType "RELATION"
-                            :instList (map #(% "propertyMap") relList)
+                            :instList (map #(let [propertyMap (% "propertyMap")] (if propertyMap propertyMap {})) relList)
                             )
     (let [builtQueries (map #(createRelation
                               :fromNodeLabels [(% "fromClassName")]
@@ -3483,7 +3482,6 @@
     (deleteDetachNodes :labels [className]
                        :parameters parameters
                        :execute? execute?)
-    
     (deleteNodes :labels [className]
                  :parameters parameters
                  :execute? execute?)))
