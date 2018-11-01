@@ -2460,7 +2460,8 @@
   Using `:forceMigrate?` in editAttributeType is not advised when there are too many instances and constraints with the attributeType ... It would take WAYYY too much time.
   Also, when changing _datatype, if the AttributeType has some unique/nodekey constraint, the instances of the AT will not be edited, as the default values are non-unique.
   But, if _name and _datatype is being changed together, the instances will be updated, but the new constraints will not be created.
-  One must manually edit all the instances to fit the constraints and then call `applyClassNeoConstraints` with the approproate `:className`"
+  One must manually edit all the instances to fit the constraints and then call `applyClassNeoConstraints` with the approproate `:className`
+  Since this function is complicated, queryAggregation is too complicated as well. Good Luck."
   [& {:keys [_name
              editChanges
              forceMigrate?
@@ -2874,15 +2875,19 @@
 
 (defn createClass
   "Create a node with label Class
-  :subClassOf should be a vector containing the name of the superclass if any(Mandatory)"
+  :subClassOf should be a vector containing the name of the superclass if any(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              classType
              isAbstract?
              subClassOf
              properties
-             execute?]
+             execute?
+             queryAggregator]
       :or {execute? true
-           subClassOf []}
+           subClassOf []
+           queryAggregator nil}
       }
    ]
   {:pre [
@@ -2929,22 +2934,19 @@
                                    :execute? true)
                          )
                  )
-          (if
-              execute?
+          (if execute?
             (apply gdriver/runTransactions completeQueryVec NCQueryVec)
-            (into completeQueryVec NCQueryVec)	
-            )
-          (gdriver/runQuery)
+            (if queryAggregator
+              (queryAggregator/addQueries :qaName queryAggregator :queries (into completeQueryVec NCQueryVec))
+	      (into completeQueryVec NCQueryVec)
+              ))
+            (throw (Exception. (str "Class `" superClassName "` Does not seem to exist")))
           )
-        )
-      (if
-          execute?
-        (gdriver/runQuery createNewNodeQuery)
-        createNewNodeQuery
-        )
-      )
-    )
-  )
+        (if execute?
+          (gdriver/runQuery createNewNodeQuery)
+          (if queryAggregator
+            (queryAggregator/addQueries :qaName queryAggregator :queries [createNewNodeQuery])
+            createNewNodeQuery))))))
 
 (defn getClassType
   "Gets the classType of a Class
@@ -2996,7 +2998,10 @@
   -'className'
   -'classType'
   -'isAbstract'
-  Changing isAbstract to true will delete all instances of the class, including relations, if the class is a node class."
+  Changing isAbstract to true will delete all instances of the class, including relations, if the class is a node class.
+  Use :forceMigrate? if you want the changes to effect instances as well. eg, if you change isAbstract? to true, then it will
+  delete all instances.
+  Since this function is complicated, queryAggregation is too complicated as well. Good Luck."
   [& {:keys [className
              newProperties
              miscProperties
@@ -3105,12 +3110,18 @@
 (defn deleteClass
   "Deletes a class.
   :className string (Mandatory)
-  :forceMigrate? should be true if instances, constraints, etc  are to be deleted as well"
+  :forceMigrate? should be true if instances, constraints, etc  are to be deleted as well
+  :schemaQueryAggregator and :dataQueryAggregator should both be names of existing queryAggregators,
+  either both nil or both strings. Make sure you execute both of these."
   [& {:keys [className
              forceMigrate?
-             execute?]
+             execute?
+             schemaQueryAggregator
+             dataQueryAggregator]
       :or {forceMigrate? false
-           execute? true}}]
+           execute? true
+           schemaQueryAggregator nil
+           dataQueryAggregator nil}}]
   {:pre [(string? className)]}
   (let [classInstancesCount (first (getClassInstances :className className
                                                       :parameters {}
@@ -3128,12 +3139,13 @@
       (if execute?
         (gdriver/runTransactions constraintDropQueries
                                  dataEditQueries)
-        {:constraintCreateQueries constraintCreateQueries
-         :constraintDropQueries constraintDropQueries
-         :dataEditQueries dataEditQueries})
-      (throw (Exception. "Use `:forceMigrate?` true explicitly to make functional changes to the class and it's instances automatically.")))
-    )
-  )
+        (if (and schemaQueryAggregator dataQueryAggregator)
+          (do (queryAggregator/addQueries :qaName schemaQueryAggregator :queries constraintDropQueries)
+              (queryAggregator/addQueries :qaName dataQueryAggregator :queries dataEditQueries))
+          {:constraintCreateQueries constraintCreateQueries
+           :constraintDropQueries constraintDropQueries
+           :dataEditQueries dataEditQueries}))
+      (throw (Exception. "Use `:forceMigrate?` true explicitly to make functional changes to the class and it's instances automatically.")))))
 
 (defn defineInitialConstraints
   "Creates Initial constraints"
@@ -3304,16 +3316,19 @@
 (defn createNodeClassInstances
   "Creates nodes , as an instance of a Class with classType:NODE.
   :className string (Mandatory)
-  :nodeList should be a collection of maps with node properties(Mandatory)"
+  :nodeList should be a collection of maps with node properties(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              nodeList
-             execute?]
+             execute?
+             queryAggregator]
       :or {execute? true
-           nodeList []}
+           nodeList []
+           queryAggregator nil}
       }
    ]
-  {:pre [
-         (string? className)
+  {:pre [(string? className)
          (coll? nodeList)
          (every? map? nodeList)
          ]
@@ -3329,13 +3344,13 @@
                             nodeList
                             )
           ]
-      (if
-          execute?
+      (if execute?
         (apply gdriver/runQuery builtQueries)
-        builtQueries))
+        (if queryAggregator
+          (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+          builtQueries)))
     (catch Exception E
-      (.getMessage E)
-      )
+      (.getMessage E))
     )
   )
 
@@ -3347,12 +3362,16 @@
   -'fromPropertyMap' a property map that matches one or more 'out' nodes.
   -'propertyMap' relation propertyMap.
   -'toClassName' className of 'in' label.(Mandatory)
-  -'toPropertyMap' a property map that matches one or more 'in' nodes."
+  -'toPropertyMap' a property map that matches one or more 'in' nodes.
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              relList
-             execute?]
+             execute?
+             queryAggregator]
       :or {execute? true
-           relList []}
+           relList []
+           queryAggregator nil}
       }
    ]
   {:pre [(string? className)
@@ -3404,26 +3423,29 @@
                               :toNodeParameters (initmap (% "toPropertyMap"))
                               :execute? false
                               :unique? true) relList)]
-      (if
-          execute?
+      (if execute?
         (apply gdriver/runQuery builtQueries)
-        builtQueries))
-    (catch Exception E (.getMessage E))
-    )
-  )
+        (if queryAggregator
+          (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+          builtQueries)))
+    (catch Exception E (.getMessage E))))
 
 (defn editNodeClassInstances
   "Edit Instances of a Node Class.
   :className string (Mandatory)
   :parameters should be a map with properties to match class instances with.
-  :changeMap should be a map with parameters to be changed.(Mandatory)"
+  :changeMap should be a map with parameters to be changed.(Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              parameters
              changeMap
-             execute?]
+             execute?
+             queryAggregator]
       :or {parameters {}
            changeMap {}
-           execute? true}}]
+           execute? true
+           queryAggregator nil}}]
   (try
     (validateClassInstances :className className
                             :classType "NODE"
@@ -3431,7 +3453,8 @@
     (editNodeProperties :labels [className]
                         :parameters parameters
                         :changeMap changeMap
-                        :execute? execute?)
+                        :execute? execute?
+                        :queryAggregator queryAggregator)
     (catch Exception E
       (.getMessage E))))
 
@@ -3439,7 +3462,9 @@
   "Edit Instances of a Relation Class.
   :className string (Mandatory)
   :relationshipParameters should be a map to match relations by.
-  :newRelationshipParameters should be a map of new properties for the relation"
+  :newRelationshipParameters should be a map of new properties for the relation
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              relationshipParameters
              newRelationshipParameters
@@ -3447,14 +3472,16 @@
              toNodeParameters
              fromNodeLabels
              toNodeLabels
-             execute?]
+             execute?
+             queryAggregator]
       :or {relationshipParameters {}
            newRelationshipParameters {}
            toNodeParameters {}
            fromNodeParameters {}
            toNodeLabels []
            fromNodeLabels []
-           execute? true}
+           execute? true
+           queryAggregator nil}
       :as keyArgs}]
   (try
     (validateClassInstances :className className
@@ -3468,41 +3495,51 @@
   "Delete Instances of a Node Class.
   :className string (Mandatory)
   :parameters should be a map with properties to match class instances with.
-  You must use :detach? explicitly if the instances have relations"
+  You must use :detach? explicitly if the instances have relations
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              parameters
              detach?
-             execute?]
+             execute?
+             queryAggregator]
       :or {parameters {}
            detach false
-           execute? true}}]
+           execute? true
+           queryAggregator nil}}]
   {:pre [(string? className)
          (classExists? :className className
                        :classType "NODE")]}
   (if detach?
     (deleteDetachNodes :labels [className]
                        :parameters parameters
-                       :execute? execute?)
+                       :execute? execute?
+                       :queryAggregator queryAggregator)
     (deleteNodes :labels [className]
                  :parameters parameters
-                 :execute? execute?)))
+                 :execute? execute?
+                 :queryAggregator queryAggregator)))
 
 (defn deleteRelationClassInstances
   "Delete Instances(Relations) of a relation class
-  :className string (Mandatory)"
+  :className string (Mandatory)
+  :queryAggregator should be a string reperesenting name of an existing queryAggregator
+  To use queryAggregator you should also set :execute? to false"
   [& {:keys [className
              relationshipParameters
              fromNodeParameters
              toNodeParameters
              fromNodeLabels
              toNodeLabels
-             execute?]
+             execute?
+             queryAggregator]
       :or {relationshipParameters {}
            toNodeParameters {}
            fromNodeParameters {}
            toNodeLabels []
            fromNodeLabels []
-           execute? true}
+           execute? true
+           queryAggregator nil}
       :as keyArgs}]
   {:pre [(string? className)
          (classExists? :className className
