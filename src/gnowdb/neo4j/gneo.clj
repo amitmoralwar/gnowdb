@@ -15,6 +15,8 @@
     []
     (clojure.core/keys map)))
 
+(defn- initmap [m] (if (nil? m)  {} m))
+
 (defn getUUIDEnabled
   [details]
   (def ^{:private true} uuidEnabled
@@ -3341,11 +3343,11 @@
   "Creates a relation between two nodes, as an instance of a class with classType:RELATION.
   :className : relation className(Mandatory)
   :relList : list of maps with the following keys(Mandatory)
-  -:fromClassName className of 'out' label.(Mandatory)
-  -:fromPropertyMap a property map that matches one or more 'out' nodes.
-  -:propertyMap relation propertyMap.
-  -:toClassName className of 'in' label.(Mandatory)
-  -:toPropertyMap a property map that matches one or more 'in' nodes."
+  -'fromClassName' className of 'out' label.(Mandatory)
+  -'fromPropertyMap' a property map that matches one or more 'out' nodes.
+  -'propertyMap' relation propertyMap.
+  -'toClassName' className of 'in' label.(Mandatory)
+  -'toPropertyMap' a property map that matches one or more 'in' nodes."
   [& {:keys [className
              relList
              execute?]
@@ -3353,8 +3355,7 @@
            relList []}
       }
    ]
-  {:pre [
-         (string? className)
+  {:pre [(string? className)
          (every? string? (map #(% "fromClassName") relList))
          (every? string? (map #(% "toClassName") relList))
          (coll? relList)
@@ -3392,15 +3393,15 @@
       )
     (validateClassInstances :className className
                             :classType "RELATION"
-                            :instList (map #(let [propertyMap (% "propertyMap")] (if propertyMap propertyMap {})) relList)
+                            :instList (map #(initmap (% "propertyMap")) relList)
                             )
     (let [builtQueries (map #(createRelation
                               :fromNodeLabels [(% "fromClassName")]
-                              :fromNodeParameters (% "fromPropertyMap")
+                              :fromNodeParameters (initmap (% "fromPropertyMap"))
                               :relationshipType className
-                              :relationshipParameters (% "propertyMap")
+                              :relationshipParameters (initmap (% "propertyMap"))
                               :toNodeLabels [(% "toClassName")]
-                              :toNodeParameters (% "toPropertyMap")
+                              :toNodeParameters (initmap (% "toPropertyMap"))
                               :execute? false
                               :unique? true) relList)]
       (if
