@@ -10,24 +10,19 @@
             [ring.util.response :refer [response]]
             [ring.middleware.json :refer [wrap-json-response]]
             [ring.middleware.session :refer [wrap-session]]
-
             [compojure.handler :as handler]
             [compojure.route :as route]
-            
-            [gnowdb.routes.gneo :refer [gneo-routes]]
-            [gnowdb.routes.gneoauto :refer [gneo-auto-routes]]
-            [gnowdb.routes.workspaces :refer [workspaces-routes]]
-            [gnowdb.routes.files :refer [files-routes]]
-            [gnowdb.routes.login :refer [login-routes]]
-
-            [gnowdb.users :as users :refer (users)]
-            
+            ;; [gnowdb.routes.gneo :refer [gneo-routes]]
+            [gnowdb.core :refer :all] ;; So that neo4j driver connection is made
+            [gnowdb.routes.autoroutes :refer [gnowdb-auto-routes]]
+            ;; [gnowdb.routes.gneoauto :refer [gneo-auto-routes]]
+            ;; [gnowdb.routes.workspaces :refer [workspaces-routes]]
+            ;; [gnowdb.routes.files :refer [files-routes]]
+            ;; [gnowdb.routes.login :refer [login-routes]]
+            [gnowdb.users :as users :refer (users)]            
             [cemerick.friend :as friend]
             (cemerick.friend [workflows :as workflows]
-                             [credentials :as creds])
-
-
-            ))
+                             [credentials :as creds])))
 
 (defn init []
   (println "liberator-service is starting"))
@@ -36,18 +31,15 @@
   (println "liberator-service is shutting down"))
 
 (defroutes app-routes
-  gneo-auto-routes
+  ;; gneo-auto-routes
+  gnowdb-auto-routes
   (route/resources "/")
   (route/not-found "Not Found"))
-
-
-
 
 (def app
   (-> 
    (handler/api app-routes)
    ;; (routes gneo-routes gneo-auto-routes workspaces-routes files-routes login-routes app-routes)  
-   
    ;; (friend/authenticate {:credential-fn (partial creds/bcrypt-credential-fn @users)
    ;;                       :workflows [(workflows/interactive-form)]
    ;;                       :allow-anon? true

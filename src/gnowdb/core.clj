@@ -79,7 +79,6 @@
       )
     )
   )
-
 (generateConf)
 (initiateReadback)
 

@@ -19,6 +19,12 @@
       :or {qaName ""}}]
   (ns-resolve 'gnowdb.neo4j.queryAggregator (symbol (concatVar :qaName qaName))))
 
+(defn getQAl
+  "Get queryAggregator from qaName"
+  [& {:keys [qaName]
+      :or {qaName ""}}]
+  @(var-get (getQA :qaName qaName)))
+
 (defn qaExists?
   "Returns whether thequeryAggregator exists"
   [& {:keys [qaName]
@@ -38,7 +44,7 @@
   {:pre [(string? qaName)
          (not (empty? qaName))
          (not (qaExists? :qaName qaName))]}
-  (intern 'gnowdb.neo4j.queryAggregator (symbol (concatVar :qaName qaName)) (queryAggregator :qaName qaName :schema? (boolean schema?))))
+  @(var-get (intern 'gnowdb.neo4j.queryAggregator (symbol (concatVar :qaName qaName)) (queryAggregator :qaName qaName :schema? (boolean schema?)))))
 
 (defn delQA
   "Deletes a created queryAggregator"
@@ -88,13 +94,3 @@
   (let [ret (runQueries :qaName qaName)]
     (swap! (var-get (getQA :qaName qaName)) #(assoc % :queryList []))
     ret))
-
-
-
-
-
-
-
-
-
-
