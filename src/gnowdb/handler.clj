@@ -7,6 +7,7 @@
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.nested-params :refer [wrap-nested-params]]
             [ring.middleware.json :refer [wrap-json-params wrap-json-response wrap-json-body]]
+            [ring.middleware.stacktrace :refer [wrap-stacktrace wrap-stacktrace-log]]
             [ring.util.response :refer [response]]
             [ring.middleware.json :refer [wrap-json-response]]
             [ring.middleware.session :refer [wrap-session]]
@@ -51,6 +52,7 @@
    (wrap-json-body)
    (wrap-json-response)
    (wrap-json-params)
-   (wrap-session)    
+   (wrap-session)
+   (wrap-stacktrace-log)
    ;; (handler/site)
    ))

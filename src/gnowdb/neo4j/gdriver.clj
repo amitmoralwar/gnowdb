@@ -27,6 +27,10 @@
   [details]
   (def ^{:private true} rcsEnabled? (details :rcsEnabled)))
 
+(defn getDebugEnabled
+  [details]
+  (def ^{:private true} debug-exceptions (details :debug-exceptions)))
+
 (defn- createSummaryMap
   "Creates a summary map from StatementResult object.
 	This Object is returned by the run() method of session object
@@ -243,11 +247,11 @@
         (.success transaction)
         finalResult
         )
-      (catch Throwable e (.failure transaction) {:results [] :summary {:summaryMap {} :summaryString (.toString e)}})
-      (finally (.close transaction) (.close session))
-      )
-    )
-  )
+      (catch Throwable e (.failure transaction) {:results [] :summary {:errorsOccured? true
+                                                                       :summaryMap {}
+                                                                       :summaryString (if debug-exceptions (.toString e) (str "Errors Occured. Exception hidden, debug-exceptions is off"))
+                                                                       :exception (if debug-exceptions (Throwable->map e) nil)}})
+      (finally (.close transaction) (.close session)))))
 
 (defn runTransactions
   "Takes lists of arguments to run in separate transactions"

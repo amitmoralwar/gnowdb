@@ -22,11 +22,11 @@
                  [clj-fuzzy "0.4.1"] ;;for levenshtein distance
                  [com.novemberain/pantomime "2.10.0"];;to extract mime types
                  [progrock "0.1.2"] ;;For progress bars
-                ] 
+                 ]
   :main ^:skip-aot gnowdb.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}}
   :plugins [[lein-codox "0.10.3"] [cider/cider-nrepl "0.18.0"] [lein-ring "0.12.4"]]
-  :ring { :handler gnowdb.handler/app
-          :init gnowdb.handler/init
-          :destroy gnowdb.handler/destroy})
+  :ring {:handler gnowdb.handler/app
+         :init gnowdb.handler/init
+         :destroy gnowdb.handler/destroy})

@@ -17,7 +17,7 @@
 
 (import '[java.io PushbackReader])
 
-(defn reload-all
+(defn- reload-all
   "Reload All"
   []
   (use 'gnowdb.core :reload-all))
@@ -37,14 +37,14 @@
                                         ;Add readbackfunctions here with the desired data
     (gdriver/getNeo4jDBDetails details)
     (gdriver/getRCSEnabled details)
+    (gdriver/getDebugEnabled details)
     (gneo/getUUIDEnabled details)
     (gcust/getCustomPassword details)
     (dumprestore/getBackupDirectory details)
     ;; (files/getDataDirectory details)
     (grcs/getRCSConfig details)
     ;; (files/getDataStorageLevels details)
-    )
-  )
+    (def debug-exceptions (details :debug-exceptions))))
 
 (defn- generateConf
   "Generates a default configuration file"
@@ -61,6 +61,7 @@
                     :data-storage-levels 3
                     :rcs-directory "rcs-repo"
                     :rcs-dir-levels 3
+                    :debug-exceptions false
                     }
         ]
     (if (not (.exists (clojure.java.io/file "src/gnowdb/neo4j/gconf.clj")))

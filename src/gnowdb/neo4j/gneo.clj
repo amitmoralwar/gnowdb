@@ -3333,25 +3333,21 @@
          (every? map? nodeList)
          ]
    }
-  (try
-    (validateClassInstances :className className
-                            :classType "NODE"
-                            :instList nodeList)
-    (let [builtQueries (map #(createNewNode :labels [className]
-                                            :parameters % 
-                                            :execute? false
-                                            )
-                            nodeList
-                            )
-          ]
-      (if execute?
-        (apply gdriver/runQuery builtQueries)
-        (if queryAggregator
-          (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
-          builtQueries)))
-    (catch Exception E
-      (.getMessage E))
-    )
+  (validateClassInstances :className className
+                          :classType "NODE"
+                          :instList nodeList)
+  (let [builtQueries (map #(createNewNode :labels [className]
+                                          :parameters % 
+                                          :execute? false
+                                          )
+                          nodeList
+                          )
+        ]
+    (if execute?
+      (apply gdriver/runQuery builtQueries)
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+        builtQueries)))
   )
 
 (defn createRelationClassInstances
@@ -3379,56 +3375,55 @@
          (every? string? (map #(% "toClassName") relList))
          (coll? relList)
          (every? map? relList)]}
-  (try;;MARK remove into {}
-    (let [relApplicableNTs (getRelApplicableNTs :className className)
-          relSourceNTs (into #{}
-                             (map #((into {} ((% "nt") :properties)) "className")
-                                  (first relApplicableNTs)
-                                  )
-                             )
-          relTargetNTs (into #{} (map #((into {} ((% "nt") :properties)) "className")
-                                      (last relApplicableNTs)
-                                      )
-                             )
-          ]
-      (doall (map (fn [relation]
-                    (if
-                        (not (contains? relSourceNTs (relation "fromClassName")))
-                      (throw (Exception. (str (relation "fromClassName")
-                                              " is not an ApplicableSourceNT for "className)
-                                         )
-                             )
-                      )
-                    (if
-                        (not (contains? relTargetNTs (relation "toClassName")))
-                      (throw (Exception. (str (relation "toClassName")
-                                              " is not an ApplicableTargetNT for "className)
-                                         )
-                             )
-                      )
+  ;;MARK remove into {}
+  (let [relApplicableNTs (getRelApplicableNTs :className className)
+        relSourceNTs (into #{}
+                           (map #((into {} ((% "nt") :properties)) "className")
+                                (first relApplicableNTs)
+                                )
+                           )
+        relTargetNTs (into #{} (map #((into {} ((% "nt") :properties)) "className")
+                                    (last relApplicableNTs)
+                                    )
+                           )
+        ]
+    (doall (map (fn [relation]
+                  (if
+                      (not (contains? relSourceNTs (relation "fromClassName")))
+                    (throw (Exception. (str (relation "fromClassName")
+                                            " is not an ApplicableSourceNT for "className)
+                                       )
+                           )
                     )
-                  relList)
-             )
-      )
-    (validateClassInstances :className className
-                            :classType "RELATION"
-                            :instList (map #(initmap (% "propertyMap")) relList)
-                            )
-    (let [builtQueries (map #(createRelation
-                              :fromNodeLabels [(% "fromClassName")]
-                              :fromNodeParameters (initmap (% "fromPropertyMap"))
-                              :relationshipType className
-                              :relationshipParameters (initmap (% "propertyMap"))
-                              :toNodeLabels [(% "toClassName")]
-                              :toNodeParameters (initmap (% "toPropertyMap"))
-                              :execute? false
-                              :unique? true) relList)]
-      (if execute?
-        (apply gdriver/runQuery builtQueries)
-        (if queryAggregator
-          (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
-          builtQueries)))
-    (catch Exception E (.getMessage E))))
+                  (if
+                      (not (contains? relTargetNTs (relation "toClassName")))
+                    (throw (Exception. (str (relation "toClassName")
+                                            " is not an ApplicableTargetNT for "className)
+                                       )
+                           )
+                    )
+                  )
+                relList)
+           )
+    )
+  (validateClassInstances :className className
+                          :classType "RELATION"
+                          :instList (map #(initmap (% "propertyMap")) relList)
+                          )
+  (let [builtQueries (map #(createRelation
+                            :fromNodeLabels [(% "fromClassName")]
+                            :fromNodeParameters (initmap (% "fromPropertyMap"))
+                            :relationshipType className
+                            :relationshipParameters (initmap (% "propertyMap"))
+                            :toNodeLabels [(% "toClassName")]
+                            :toNodeParameters (initmap (% "toPropertyMap"))
+                            :execute? false
+                            :unique? true) relList)]
+    (if execute?
+      (apply gdriver/runQuery builtQueries)
+      (if queryAggregator
+        (queryAggregator/addQueries :qaName queryAggregator :queries builtQueries)
+        builtQueries))))
 
 (defn editNodeClassInstances
   "Edit Instances of a Node Class.
@@ -3446,17 +3441,14 @@
            changeMap {}
            execute? true
            queryAggregator nil}}]
-  (try
-    (validateClassInstances :className className
-                            :classType "NODE"
-                            :instList [changeMap])
-    (editNodeProperties :labels [className]
-                        :parameters parameters
-                        :changeMap changeMap
-                        :execute? execute?
-                        :queryAggregator queryAggregator)
-    (catch Exception E
-      (.getMessage E))))
+  (validateClassInstances :className className
+                          :classType "NODE"
+                          :instList [changeMap])
+  (editNodeProperties :labels [className]
+                      :parameters parameters
+                      :changeMap changeMap
+                      :execute? execute?
+                      :queryAggregator queryAggregator))
 
 (defn editRelationClassInstances
   "Edit Instances of a Relation Class.
@@ -3483,13 +3475,10 @@
            execute? true
            queryAggregator nil}
       :as keyArgs}]
-  (try
-    (validateClassInstances :className className
-                            :classType "RELATION"
-                            :instList [newRelationshipParameters])
-    (apply editRelation (prepMapAsArg (dissoc (assoc keyArgs :relationshipType className) :className)))
-    (catch Exception E
-      (.getMessage E))))
+  (validateClassInstances :className className
+                          :classType "RELATION"
+                          :instList [newRelationshipParameters])
+  (apply editRelation (prepMapAsArg (dissoc (assoc keyArgs :relationshipType className) :className))))
 
 (defn deleteNodeClassInstances
   "Delete Instances of a Node Class.
