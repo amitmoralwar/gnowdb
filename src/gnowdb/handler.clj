@@ -1,5 +1,6 @@
 (ns gnowdb.handler
-  (:require [compojure.core :refer [defroutes routes]]
+  (:gen-class)
+  (:require [compojure.core :refer [defroutes routes POST ANY]]
             [ring.middleware.defaults :refer :all]
             [ring.middleware.resource :refer [wrap-resource]]
             [ring.middleware.file-info :refer [wrap-file-info]]
@@ -20,16 +21,25 @@
             ;; [gnowdb.routes.workspaces :refer [workspaces-routes]]
             ;; [gnowdb.routes.files :refer [files-routes]]
             ;; [gnowdb.routes.login :refer [login-routes]]
-            [gnowdb.users :as users :refer (users)]            
+            ;; [gnowdb.users :as users :refer (users)]
             [cemerick.friend :as friend]
             (cemerick.friend [workflows :as workflows]
                              [credentials :as creds])))
 
-(defn init []
-  (println "liberator-service is starting"))
+(def users (let [plainUsers (let [defaultUsers {"admin" {:username "admin"
+                                                         :password "admin"
+                                                         :roles #{:admin}}}]
+                              (if (not (.exists (clojure.java.io/file "src/gnowdb/restconf.clj")))
+                                (do (spit "src/gnowdb/restconf.clj" defaultUsers)
+                                    defaultUsers)
+                                (merge defaultUsers (read-string (slurp "src/gnowdb/restconf.clj")))))]
+             (reduce (fn [m user] (update-in m [user :password] creds/hash-bcrypt)) plainUsers (keys plainUsers))))
 
-(defn destroy []
-  (println "liberator-service is shutting down"))
+(defn- init []
+  (println "Starting REST API"))
+
+(defn- destroy []
+  (println "REST API shutting down"))
 
 (defroutes app-routes
   ;; gneo-auto-routes
@@ -41,11 +51,12 @@
   (-> 
    (handler/api app-routes)
    ;; (routes gneo-routes gneo-auto-routes workspaces-routes files-routes login-routes app-routes)  
-   ;; (friend/authenticate {:credential-fn (partial creds/bcrypt-credential-fn @users)
-   ;;                       :workflows [(workflows/interactive-form)]
-   ;;                       :allow-anon? true
-   ;;                       :login-uri "/login"
-   ;;                       :default-landing-uri "/api"})  
+   (friend/authenticate {:workflows [(workflows/http-basic
+                                      :credential-fn #(creds/bcrypt-credential-fn users %)
+                                      :realm "gnowdb")]
+                         :allow-anon? true
+                         :unauthenticated-handler #(workflows/http-basic-deny "gnowdb" %)
+                         })
    (wrap-params)
    (wrap-keyword-params)
    (wrap-nested-params)
