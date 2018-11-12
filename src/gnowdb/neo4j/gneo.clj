@@ -2941,12 +2941,12 @@
 	      (into completeQueryVec NCQueryVec)
               ))
             (throw (Exception. (str "Class `" superClassName "` Does not seem to exist")))
-          )
+          ))
         (if execute?
           (gdriver/runQuery createNewNodeQuery)
           (if queryAggregator
             (queryAggregator/addQueries :qaName queryAggregator :queries [createNewNodeQuery])
-            createNewNodeQuery))))))
+            createNewNodeQuery)))))
 
 (defn getClassType
   "Gets the classType of a Class
