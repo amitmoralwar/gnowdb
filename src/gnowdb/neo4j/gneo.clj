@@ -687,7 +687,7 @@
                              "RELATION" (str "MATCH (n1)-[rel"(createLabelString :labels labels)"]->(obj)"
                                              " MERGE (n1)-[rel2"(createLabelString :labels [(replaceLabelMap (first labels))])"]-(obj)"
                                              " SET rel2=rel"
-                                             " WITH rel"
+                                             " WITH rel, obj"
                                              " DELETE rel"
                                              (createReturnString ["obj" "UUID" "UUID"]))
                              )
@@ -2940,13 +2940,13 @@
               (queryAggregator/addQueries :qaName queryAggregator :queries (into completeQueryVec NCQueryVec))
 	      (into completeQueryVec NCQueryVec)
               ))
-            (throw (Exception. (str "Class `" superClassName "` Does not seem to exist")))
+          (throw (Exception. (str "Class `" superClassName "` Does not seem to exist")))
           ))
-        (if execute?
-          (gdriver/runQuery createNewNodeQuery)
-          (if queryAggregator
-            (queryAggregator/addQueries :qaName queryAggregator :queries [createNewNodeQuery])
-            createNewNodeQuery)))))
+      (if execute?
+        (gdriver/runQuery createNewNodeQuery)
+        (if queryAggregator
+          (queryAggregator/addQueries :qaName queryAggregator :queries [createNewNodeQuery])
+          createNewNodeQuery)))))
 
 (defn getClassType
   "Gets the classType of a Class
