@@ -2596,8 +2596,7 @@
       (if execute?
         (apply gdriver/runQuery deleteQueries)
         deleteQueries)
-      (if
-          (not forceMigrate?)
+      (if (not forceMigrate?)
         (throw (Exception. (str "Class(es) "(seq
                                              (map #((into {} ((% "n") :properties))
                                                     "className")
@@ -2620,7 +2619,7 @@
                                                                                                                          :editType "DELETE"
                                                                                                                          :editVal _name)
                                                                                         :constraintType (% "neo.constraintType"))) neoConstraintsWithAT))
-              dataEditQueries (reduceQueryColl (conj deleteQueries
+              dataEditQueries (reduceQueryColl (concat deleteQueries
                                                      [(createDelATNC :atName _name)
                                                       (createDelATCC :atName _name)
                                                       {:query (str "MATCH (node) WHERE "
