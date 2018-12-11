@@ -3,6 +3,9 @@
   (:require [gnowdb.neo4j.gneo :as gneo]
             [gnowdb.spec.workspaces :as workspaces]
             [gnowdb.spec.files :as files]
+            [gnowdb.spec.nodes :as nodes]
+            [gnowdb.spec.models :as models]
+        
             [progrock.core :as pr]
             )
   )
@@ -25,7 +28,9 @@
 (defn- createAbstractNodeClass
   "Creates GDB_Node class, it is the only class that has no superclasses"
   []
+  (gneo/createClass :className "ABAPPP" :classType "NODE" :isAbstract? false :subClassOf [] :properties {})
   (gneo/createClass :className "GDB_Node" :classType "NODE" :isAbstract? true :subClassOf [] :properties {})
+  (gneo/createAttributeType :_name "TESTTTTTTT" :_datatype "java.lang.String")
   (gneo/createAttributeType :_name "GDB_DisplayName" :_datatype "java.lang.String")
   (gneo/createAttributeType :_name "GDB_AlternateName" :_datatype "java.lang.String")
   (gneo/createAttributeType :_name "GDB_CreatedAt" :_datatype "java.lang.String")
@@ -71,4 +76,9 @@
   (tickProgressBar 40)
   (files/init)
   (tickProgressBar 30)
+  (models/init)
+  (tickProgressBar 40)
+  (nodes/init)
+  (tickProgressBar 60)
+
   )
